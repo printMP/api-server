@@ -1,16 +1,74 @@
 import express, { Request, Response } from 'express';
+import { Product } from './Product';
+import { v4 as uuidv4 } from 'uuid';
+import { Update } from './Update';
 
 const app = express();
 const port = process.env.PORT || 3000;
+app.use(express.json());
 
+let products: Product[] = [
+    {
+        id: '1',
+        title: 'Sample Product',
+        image: 'https://example.com/image.jpg',
+        price: 99.99,
+        link: 'https://example.com/product'
+    }
+];
+
+// Root route
 app.get('/', (req: Request, res: Response) => {
-    res.send('Hello from Express with TypeScript!');
+    res.send('Hello from Express with typescript!');
 });
 
-app.listen(
-    port, 
-    () => {
-      console.log('Server is running on http://localhost:'+port)  
-    }
-)
+// READ all products
+app.get('/products', (req: Request, res: Response<Product[]>) => {
+    res.json(products);
+});
 
+// CREATE a new product
+app.post('/product', (req: Request, res: Response<Product>) => {
+    const newProduct: Product = { id: uuidv4(), ...req.body };
+    products.push(newProduct);
+    console.log("The new product is ", newProduct);
+    res.status(201).json(newProduct);
+});
+
+// UPDATE a product by ID
+app.put('/products/:id', (req: Request<{ id: string }, {}, Update>, res: Response) => {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const index = products.findIndex(p => p.id === id);
+    console.log("the index is ",index);
+    console.log("the old data is ",products[index]);
+    console.log("the new data is ",updateData);
+    if (index === -1) {
+        return res.status(404).json({ error: 'Product not found' });
+    }
+
+    products[index] = { ...products[index], ...updateData };
+    res.json(products[index]);
+});
+
+app.delete('/products/:id', (req: Request<{ id: string }>, res: Response) => {
+  const { id } = req.params;
+
+  const index = products.findIndex(p => p.id === id);
+  if (index === -1) {
+    return res.status(404).json({ error: 'Product not found' });
+  }
+
+  // Remove product
+  const deletedProduct = products.splice(index, 1)[0];
+  console.log("the id is", id)
+  console.log("the index is", index)
+  console.log("the deleted product is", deletedProduct)
+  res.json({ message: 'Product deleted', product: deletedProduct });
+  
+});
+
+app.listen(port, () => {
+    console.log(`Server running on http://localhost:${port}`);
+});

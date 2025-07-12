@@ -2,10 +2,23 @@ import express, { Request, Response } from 'express';
 import { Product } from './Product';
 import { v4 as uuidv4 } from 'uuid';
 import { Update } from './Update';
+import cors from 'cors'
+
 
 const app = express();
 const port = process.env.PORT || 3000;
 app.use(express.json());
+
+
+// Allow requests from React dev server
+app.use(cors({
+  origin: 'http://localhost:5173', // Change this to match your React dev server
+  credentials: true, // if you're using cookies or sessions
+}));
+
+// or just allow all origins (less secure, for dev only)
+app.use(cors());
+
 
 let products: Product[] = [
     {

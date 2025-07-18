@@ -1,6 +1,8 @@
 import express, { Request, Response } from 'express';
 import { Product } from './Product';
 import { v4 as uuidv4 } from 'uuid';
+import connectDB from './db';
+import ProductModel, { IProduct } from './models/Product';
 import { Update } from './Update';
 import cors from 'cors'
 
@@ -22,6 +24,7 @@ app.use(cors());
 
 let products: Product[] = [
     {
+        id_: uuidv4(),
         id: '1',
         title: 'Sample Product',
         image: 'https://example.com/image.jpg',
@@ -42,7 +45,7 @@ app.get('/products', (req: Request, res: Response<Product[]>) => {
 
 // CREATE a new product
 app.post('/product', (req: Request, res: Response<Product>) => {
-    const newProduct: Product = { id: uuidv4(), ...req.body };
+    const newProduct: Product = { id_: uuidv4(), ...req.body };
     products.push(newProduct);
     console.log("The new product is ", newProduct);
     res.status(201).json(newProduct);

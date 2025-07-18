@@ -7,4 +7,4 @@ const productSchema = new mongoose.Schema({
     link: { type: String, required: true }
 })
 
-export default 
+export default mongoose.Schema

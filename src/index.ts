@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import { Product } from './Product';
 import { v4 as uuidv4 } from 'uuid';
-import connectDB from './db';
+import { connectDB } from './db';
 import ProductModel, { IProduct } from './models/Product';
 import { Update } from './Update';
 import cors from 'cors'
@@ -10,6 +10,7 @@ import cors from 'cors'
 const app = express();
 const port = process.env.PORT || 3000;
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 
 // Allow requests from React dev server
@@ -17,10 +18,6 @@ app.use(cors({
   origin: 'http://localhost:5173', // Change this to match your React dev server
   credentials: true, // if you're using cookies or sessions
 }));
-
-// or just allow all origins (less secure, for dev only)
-app.use(cors());
-
 
 let products: Product[] = [
     {
@@ -33,58 +30,66 @@ let products: Product[] = [
     }
 ];
 
-// Root route
+//Home Root
 app.get('/', (req: Request, res: Response) => {
-    res.send('Hello from Express with typescript!');
+      res.send('Hello from Express with TypeScript!');
 });
 
 // READ all products
-app.get('/products', (req: Request, res: Response<Product[]>) => {
-    res.json(products);
-});
-
+// Later dbl-chk
+app.get('/products', async (req: Request, res: Response) => {
+    try {
+      const products = await ProductModel.find();
+      res.json(products);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch products' });
+    }
+  });
+  
 // CREATE a new product
-app.post('/product', (req: Request, res: Response<Product>) => {
-    const newProduct: Product = { id_: uuidv4(), ...req.body };
-    products.push(newProduct);
-    console.log("The new product is ", newProduct);
-    res.status(201).json(newProduct);
+// Dbl-chk
+app.post('/product', async (req: Request, res: Response) => {
+  try {
+    console.log("Here",req.body);
+    const newProduct = new ProductModel({ id_: uuidv4(), ...req.body });
+    const savedProduct = await newProduct.save();
+    res.status(201).json(savedProduct);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create product' });
+  }
 });
 
 // UPDATE a product by ID
-app.put('/products/:id', (req: Request<{ id: string }, {}, Update>, res: Response) => {
-    const { id } = req.params;
-    const updateData = req.body;
-
-    const index = products.findIndex(p => p.id === id);
-    console.log("the index is ",index);
-    console.log("the old data is ",products[index]);
-    console.log("the new data is ",updateData);
-    if (index === -1) {
-        return res.status(404).json({ error: 'Product not found' });
+// Dbl-Chk later
+app.put('/products/:id', async (req: Request, res: Response) => {
+    try {
+      const updatedProduct = await ProductModel.findOneAndUpdate(
+        { id: req.params.id },
+        req.body,
+        { new: true }
+      );
+      if (!updatedProduct) return res.status(404).json({ error: 'Product not found' });
+      res.json(updatedProduct);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to update product' });
     }
-
-    products[index] = { ...products[index], ...updateData };
-    res.json(products[index]);
 });
 
-app.delete('/products/:id', (req: Request<{ id: string }>, res: Response) => {
-  const { id } = req.params;
-
-  const index = products.findIndex(p => p.id === id);
-  if (index === -1) {
-    return res.status(404).json({ error: 'Product not found' });
-  }
-
-  // Remove product
-  const deletedProduct = products.splice(index, 1)[0];
-  console.log("the id is", id)
-  console.log("the index is", index)
-  console.log("the deleted product is", deletedProduct)
-  res.json({ message: 'Product deleted', product: deletedProduct });
   
-});
+  app.delete('/products/:id', async (req: Request, res: Response) => {
+    try {
+      const deletedProduct = await ProductModel.findOneAndDelete({ id: req.params.id });
+      if (!deletedProduct) return res.status(404).json({ error: 'Product not found' });
+      res.json({ message: 'Product deleted', product: deletedProduct });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete product' });
+    }
+  });
 
-app.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}`);
-});
+(async () => {
+  await connectDB();
+
+  app.listen(port, () => {
+    console.log(`🚀 Server is running on http://localhost:${port}`);
+  });
+})();
